@@ -1,1 +1,3954 @@
-안녕하세요
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>OLS & Gauss–Markov Explorer</title>
+
+    <!-- Excel / CSV 읽기 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- 그래프 -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+    <!-- t분포, F분포, 정규분포 계산 -->
+    <script src="https://cdn.jsdelivr.net/npm/jstat@1.9.6/dist/jstat.min.js"></script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f4f6f8;
+            color: #202124;
+
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                "Noto Sans KR",
+                sans-serif;
+
+            line-height: 1.65;
+        }
+
+        .container {
+            width: min(1150px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 50px 0 100px;
+        }
+
+        header {
+            margin-bottom: 36px;
+        }
+
+        header h1 {
+            margin: 0 0 10px;
+            font-size: 34px;
+        }
+
+        header p {
+            margin: 0;
+            color: #666;
+        }
+
+        .card {
+            background: white;
+            padding: 28px;
+            margin-bottom: 22px;
+
+            border-radius: 14px;
+
+            box-shadow:
+                0 2px 12px
+                rgba(0, 0, 0, 0.06);
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        h3 {
+            margin-top: 32px;
+        }
+
+        .upload-box {
+            border: 2px dashed #c7ccd1;
+
+            border-radius: 12px;
+
+            padding: 35px;
+
+            text-align: center;
+
+            background: #fafafa;
+        }
+
+        input,
+        select {
+            width: 100%;
+
+            padding: 12px 13px;
+
+            border: 1px solid #cfd4da;
+
+            border-radius: 8px;
+
+            font-size: 15px;
+
+            background: white;
+        }
+
+        input[type="file"] {
+            width: auto;
+            max-width: 100%;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: 600;
+        }
+
+        button {
+            width: 100%;
+
+            border: 0;
+
+            padding: 15px;
+
+            border-radius: 9px;
+
+            background: #202124;
+
+            color: white;
+
+            font-size: 16px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .grid-2 {
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+
+            gap: 18px;
+        }
+
+        .grid-4 {
+            display: grid;
+
+            grid-template-columns:
+                repeat(4, minmax(0, 1fr));
+
+            gap: 14px;
+        }
+
+        .metric {
+            padding: 18px;
+
+            background: #f7f8fa;
+
+            border-radius: 10px;
+        }
+
+        .metric .name {
+            color: #6f7479;
+            font-size: 13px;
+        }
+
+        .metric .value {
+            display: block;
+
+            margin-top: 7px;
+
+            font-size: 21px;
+
+            font-weight: 700;
+        }
+
+        .metric .help {
+            margin-top: 8px;
+
+            color: #777;
+
+            font-size: 12px;
+        }
+
+        .equation {
+            padding: 20px;
+
+            border-radius: 10px;
+
+            background: #f3f5f7;
+
+            text-align: center;
+
+            font-size: 21px;
+
+            font-weight: 700;
+        }
+
+        .formula {
+            padding: 20px;
+
+            background: #f7f8fa;
+
+            border-radius: 10px;
+
+            white-space: pre-line;
+        }
+
+        .notice {
+            padding: 16px 18px;
+
+            border-left: 4px solid #444;
+
+            background: #f7f7f7;
+
+            border-radius: 6px;
+
+            margin: 18px 0;
+        }
+
+        .warning {
+            padding: 16px 18px;
+
+            background: #fff8e5;
+
+            border-radius: 8px;
+
+            margin-bottom: 20px;
+        }
+
+        .success {
+            padding: 16px 18px;
+
+            background: #edf8ef;
+
+            border-radius: 8px;
+        }
+
+        .error {
+            padding: 16px;
+
+            margin-bottom: 20px;
+
+            background: #ffecec;
+
+            color: #a40000;
+
+            border-radius: 8px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .chart {
+            height: 480px;
+            width: 100%;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+
+            border-collapse: collapse;
+
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+
+            text-align: center;
+
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        th {
+            background: #f7f8fa;
+        }
+
+        .term-table td:nth-child(1) {
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .term-table td:nth-child(2),
+        .term-table td:nth-child(3) {
+            text-align: left;
+        }
+
+        .small {
+            color: #777;
+            font-size: 13px;
+        }
+
+        .section-description {
+            color: #666;
+            margin-top: -8px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 850px) {
+
+            .grid-4 {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+            }
+
+        }
+
+        @media (max-width: 600px) {
+
+            .grid-2,
+            .grid-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                width: min(
+                    100% - 20px,
+                    1150px
+                );
+
+                padding-top: 25px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .chart {
+                height: 400px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <header>
+
+        <h1>
+            OLS & Gauss–Markov Explorer
+        </h1>
+
+        <p>
+            Excel 데이터를 이용해 OLS를 계산하고,
+            Gauss–Markov 정리와 BLUE를 직접 확인합니다.
+        </p>
+
+    </header>
+
+
+    <div
+        id="errorBox"
+        class="error hidden"
+    ></div>
+
+
+    <!-- ================================================= -->
+    <!-- 1. 파일 -->
+    <!-- ================================================= -->
+
+    <section class="card">
+
+        <h2>
+            1. 데이터 불러오기
+        </h2>
+
+        <p class="section-description">
+            Excel 또는 CSV 파일의 첫 번째 행을 변수명으로 사용합니다.
+            파일은 서버로 전송되지 않고 브라우저 안에서만 처리됩니다.
+        </p>
+
+        <div class="upload-box">
+
+            <input
+                id="fileInput"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+            >
+
+            <p id="fileInfo">
+                파일을 선택하세요.
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- ================================================= -->
+    <!-- 2. 변수 선택 -->
+    <!-- ================================================= -->
+
+    <section
+        id="variableSection"
+        class="card hidden"
+    >
+
+        <h2>
+            2. 변수 선택
+        </h2>
+
+        <div class="grid-2">
+
+            <div>
+
+                <label>
+                    X — 독립변수
+                </label>
+
+                <select id="xSelect"></select>
+
+            </div>
+
+            <div>
+
+                <label>
+                    Y — 종속변수
+                </label>
+
+                <select id="ySelect"></select>
+
+            </div>
+
+        </div>
+
+        <br>
+
+        <button id="analyzeButton">
+            OLS 분석하기
+        </button>
+
+    </section>
+
+
+    <!-- ================================================= -->
+    <!-- OLS -->
+    <!-- ================================================= -->
+
+    <section
+        id="resultSection"
+        class="hidden"
+    >
+
+        <div class="card">
+
+            <h2>
+                3. OLS 추정 결과
+            </h2>
+
+            <div
+                id="equation"
+                class="equation"
+            ></div>
+
+            <br>
+
+            <div class="grid-4">
+
+                <div class="metric">
+
+                    <span class="name">
+                        표본 수 n
+                    </span>
+
+                    <span
+                        class="value"
+                        id="nValue"
+                    ></span>
+
+                    <div class="help">
+                        실제 회귀분석에 사용된
+                        유효한 관측치 수
+                    </div>
+
+                </div>
+
+
+                <div class="metric">
+
+                    <span class="name">
+                        R²
+                    </span>
+
+                    <span
+                        class="value"
+                        id="r2Value"
+                    ></span>
+
+                    <div class="help">
+                        Y의 전체 변동 중
+                        회귀식이 설명하는 비율
+                    </div>
+
+                </div>
+
+
+                <div class="metric">
+
+                    <span class="name">
+                        Adjusted R²
+                    </span>
+
+                    <span
+                        class="value"
+                        id="adjustedR2Value"
+                    ></span>
+
+                    <div class="help">
+                        설명변수 수를 고려하여
+                        보정한 R²
+                    </div>
+
+                </div>
+
+
+                <div class="metric">
+
+                    <span class="name">
+                        F 통계량
+                    </span>
+
+                    <span
+                        class="value"
+                        id="fValue"
+                    ></span>
+
+                    <div class="help">
+                        회귀식 전체의
+                        설명력이 있는지 검정
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- 회귀계수 -->
+
+        <div class="card">
+
+            <h2>
+                회귀계수
+            </h2>
+
+            <div class="table-wrapper">
+
+                <table>
+
+                    <thead>
+
+                    <tr>
+                        <th>항목</th>
+                        <th>추정값</th>
+                        <th>표준오차</th>
+                        <th>t</th>
+                        <th>p-value</th>
+                        <th>95% 신뢰구간</th>
+                    </tr>
+
+                    </thead>
+
+                    <tbody id="coefficientTable"></tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+
+        <!-- 제곱합 -->
+
+        <div class="card">
+
+            <h2>
+                변동의 분해
+            </h2>
+
+            <div
+                id="sumSquares"
+                class="formula"
+            ></div>
+
+        </div>
+
+
+        <!-- 회귀선 -->
+
+        <div class="card">
+
+            <h2>
+                관측값과 OLS 회귀선
+            </h2>
+
+            <div
+                id="regressionChart"
+                class="chart"
+            ></div>
+
+        </div>
+
+
+        <!-- 잔차 -->
+
+        <div class="card">
+
+            <h2>
+                Residuals vs Fitted
+            </h2>
+
+            <p class="small">
+                적합값과 잔차 사이에 특정한 패턴이
+                존재하는지 확인하는 진단 그래프입니다.
+            </p>
+
+            <div
+                id="residualChart"
+                class="chart"
+            ></div>
+
+        </div>
+
+
+        <!-- QQ -->
+
+        <div class="card">
+
+            <h2>
+                Q-Q Plot
+            </h2>
+
+            <p class="small">
+                잔차의 분포가 정규분포와 얼마나
+                유사한지 시각적으로 확인합니다.
+            </p>
+
+            <div
+                id="qqChart"
+                class="chart"
+            ></div>
+
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- BLUE -->
+        <!-- ================================================= -->
+
+        <div class="card">
+
+            <h2>
+                4. Gauss–Markov / BLUE 실험
+            </h2>
+
+            <div class="warning">
+
+                여기서 입력하는 β₀, β₁, σ는
+                실제 데이터에서 밝혀낸 참 모수가 아닙니다.
+
+                반복표본 실험을 위해
+                우리가 참이라고 가정하는 모집단 모수입니다.
+
+            </div>
+
+
+            <div class="grid-2">
+
+                <div>
+
+                    <label>
+                        참 절편 β₀
+                    </label>
+
+                    <input
+                        id="trueBeta0"
+                        type="number"
+                        step="any"
+                    >
+
+                </div>
+
+
+                <div>
+
+                    <label>
+                        참 기울기 β₁
+                    </label>
+
+                    <input
+                        id="trueBeta1"
+                        type="number"
+                        step="any"
+                    >
+
+                </div>
+
+
+                <div>
+
+                    <label>
+                        오차 표준편차 σ
+                    </label>
+
+                    <input
+                        id="trueSigma"
+                        type="number"
+                        value="5"
+                        min="0.000001"
+                        step="any"
+                    >
+
+                </div>
+
+
+                <div>
+
+                    <label>
+                        반복표본 수
+                    </label>
+
+                    <input
+                        id="simulationCount"
+                        type="number"
+                        value="5000"
+                        min="100"
+                        max="20000"
+                    >
+
+                </div>
+
+            </div>
+
+            <br>
+
+            <button id="blueButton">
+                BLUE 시뮬레이션 실행
+            </button>
+
+        </div>
+
+
+        <div
+            id="blueResult"
+            class="hidden"
+        >
+
+            <div class="card">
+
+                <h2>
+                    5. 불편성 확인
+                </h2>
+
+                <div
+                    id="unbiasedResult"
+                    class="formula"
+                ></div>
+
+                <div class="notice">
+
+                    반복표본 평균이 참 β에 가까워지는 것은
+                    E[β̂ | X] = β를 시뮬레이션으로
+                    확인하는 것입니다.
+
+                    이것 자체가 수학적 증명은 아닙니다.
+
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <h2>
+                    β̂₁의 표본추출분포
+                </h2>
+
+                <div
+                    id="betaHistogram"
+                    class="chart"
+                ></div>
+
+            </div>
+
+
+            <div class="card">
+
+                <h2>
+                    6. 잔차제곱합의 기대값
+                </h2>
+
+                <div
+                    id="sseResult"
+                    class="formula"
+                ></div>
+
+            </div>
+
+
+            <div class="card">
+
+                <h2>
+                    7. BLUE: Best 확인
+                </h2>
+
+                <div
+                    id="varianceResult"
+                    class="formula"
+                ></div>
+
+                <div
+                    id="varianceChart"
+                    class="chart"
+                ></div>
+
+            </div>
+
+
+            <div class="card">
+
+                <h2>
+                    8. Gauss–Markov 이론 증명
+                </h2>
+
+                <div class="formula">
+OLS 추정량:
+
+β̂ = (X'X)⁻¹X'Y
+
+모형:
+
+Y = Xβ + u
+
+대입:
+
+β̂
+= (X'X)⁻¹X'(Xβ + u)
+
+= β + (X'X)⁻¹X'u
+
+
+조건부 기대값:
+
+E[β̂ | X]
+= β + (X'X)⁻¹X'E[u | X]
+
+Gauss–Markov 가정에서
+
+E[u | X] = 0
+
+이므로
+
+E[β̂ | X] = β
+
+따라서 OLS는 불편추정량입니다.
+
+
+────────────────────────────
+
+
+또한
+
+Var(u | X) = σ²I
+
+이면
+
+Var(β̂ | X)
+
+= σ²(X'X)⁻¹
+
+
+이제 임의의 다른 선형 불편추정량을
+
+β̃ = AY
+
+라고 합시다.
+
+
+불편추정량이므로
+
+AX = I
+
+
+OLS 행렬을
+
+A₀ = (X'X)⁻¹X'
+
+라고 하면
+
+A = A₀ + C
+
+로 쓸 수 있고
+
+CX = 0
+
+이어야 합니다.
+
+
+따라서
+
+Var(β̃ | X)
+− Var(β̂ | X)
+
+= σ²CC'
+
+
+그리고 임의의 벡터 a에 대하여
+
+a'CC'a
+
+= (C'a)'(C'a)
+
+≥ 0
+
+
+따라서 σ²CC'는
+positive semidefinite입니다.
+
+
+즉 모든 선형 불편추정량 β̃에 대해
+
+Var(β̃ | X)
+− Var(β̂ | X)
+
+가 positive semidefinite입니다.
+
+
+결론:
+
+OLS는 Gauss–Markov 가정 아래에서
+
+Best
+Linear
+Unbiased
+Estimator
+
+즉 BLUE입니다.
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ================================================= -->
+    <!-- 용어 설명 -->
+    <!-- ================================================= -->
+
+    <section class="card">
+
+        <h2>
+            화면에 등장하는 통계 용어
+        </h2>
+
+        <div class="table-wrapper">
+
+            <table class="term-table">
+
+                <thead>
+
+                <tr>
+                    <th>용어</th>
+                    <th>뜻</th>
+                    <th>왜 보는가</th>
+                </tr>
+
+                </thead>
+
+                <tbody>
+
+                <tr>
+                    <td>β̂₀</td>
+                    <td>
+                        OLS가 추정한 절편입니다.
+                        X=0일 때 Y의 예측값입니다.
+                    </td>
+                    <td>
+                        회귀선의 위치를 결정합니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>β̂₁</td>
+                    <td>
+                        OLS가 추정한 기울기입니다.
+                    </td>
+                    <td>
+                        X가 1단위 변할 때
+                        Y의 예측값이 얼마나 변하는지 봅니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Fitted Value</td>
+                    <td>
+                        회귀식이 각 X에 대해 예측한
+                        Ŷ 값입니다.
+                    </td>
+                    <td>
+                        실제 Y와 비교하여 잔차를 계산합니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Residual</td>
+                    <td>
+                        eᵢ = Yᵢ − Ŷᵢ 입니다.
+                    </td>
+                    <td>
+                        회귀식이 설명하지 못한 부분입니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>SSE</td>
+                    <td>
+                        Σ(Yᵢ − Ŷᵢ)²,
+                        즉 잔차제곱합입니다.
+                    </td>
+                    <td>
+                        OLS가 직접 최소화하는 값입니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>SST</td>
+                    <td>
+                        Σ(Yᵢ − Ȳ)²,
+                        Y의 전체 변동입니다.
+                    </td>
+                    <td>
+                        회귀분석 이전에 존재하는
+                        전체 Y 변동의 크기를 나타냅니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>SSR</td>
+                    <td>
+                        Σ(Ŷᵢ − Ȳ)²,
+                        회귀식이 설명한 변동입니다.
+                    </td>
+                    <td>
+                        전체 변동 중 회귀식이
+                        설명한 부분을 나타냅니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>R²</td>
+                    <td>
+                        1 − SSE/SST 입니다.
+                    </td>
+                    <td>
+                        Y의 전체 표본 변동 중
+                        회귀식이 설명한 비율을 보여줍니다.
+                        OLS 계수를 구하는 데 반드시 필요한 값은 아닙니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Adjusted R²</td>
+                    <td>
+                        설명변수 수와 표본크기를 고려하여
+                        R²를 보정한 값입니다.
+                    </td>
+                    <td>
+                        다중회귀에서 변수를 무작정 추가하면
+                        R²가 올라가는 문제를 보완합니다.
+                        단순회귀에서는 중요성이 상대적으로 작습니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>MSE</td>
+                    <td>
+                        SSE/(n−2) 입니다.
+                    </td>
+                    <td>
+                        단순회귀의 Gauss–Markov 가정 아래
+                        σ²의 불편추정량입니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Standard Error</td>
+                    <td>
+                        β̂의 표본추출분포의
+                        표준편차를 추정한 값입니다.
+                    </td>
+                    <td>
+                        추정된 계수가 얼마나
+                        불확실한지를 평가합니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>t statistic</td>
+                    <td>
+                        β̂ / SE(β̂)입니다.
+                    </td>
+                    <td>
+                        보통 H₀: β=0을 검정할 때 사용합니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>p-value</td>
+                    <td>
+                        귀무가설이 참이라는 전제하에서
+                        지금과 같거나 더 극단적인 통계량이
+                        관측될 확률입니다.
+                    </td>
+                    <td>
+                        회귀계수 또는 회귀식에 대한
+                        가설검정에서 사용합니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>95% CI</td>
+                    <td>
+                        추정량의 95% 신뢰구간입니다.
+                    </td>
+                    <td>
+                        하나의 점추정값만 보지 않고
+                        추정의 불확실성 범위를 봅니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>F statistic</td>
+                    <td>
+                        설명된 변동과 설명되지 않은 변동의
+                        상대적 크기를 이용하는 검정통계량입니다.
+                    </td>
+                    <td>
+                        회귀식 전체가 설명력을 가지는지 검정합니다.
+                        단순회귀에서는 기울기 t통계량의 제곱과 같습니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Q-Q Plot</td>
+                    <td>
+                        잔차 분위수와 정규분포의
+                        이론적 분위수를 비교합니다.
+                    </td>
+                    <td>
+                        잔차의 정규성을 시각적으로 확인합니다.
+                        정규성은 BLUE의 필요조건은 아닙니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Unbiased</td>
+                    <td>
+                        E[β̂ | X] = β를 의미합니다.
+                    </td>
+                    <td>
+                        반복표본에서 추정량의 평균이
+                        참 모수와 일치하는지를 뜻합니다.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>BLUE</td>
+                    <td>
+                        Best Linear Unbiased Estimator입니다.
+                    </td>
+                    <td>
+                        모든 선형 불편추정량 중
+                        OLS가 최소 분산을 가진다는
+                        Gauss–Markov 정리의 결론입니다.
+                    </td>
+                </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<script>
+
+    // =========================================================
+    // 전역 상태
+    // =========================================================
+
+    let currentFile = null;
+    let headers = [];
+    let rows = [];
+    let numericColumns = [];
+
+    let currentX = null;
+    let currentY = null;
+    let currentOLS = null;
+
+
+    const fileInput =
+        document.getElementById("fileInput");
+
+    const fileInfo =
+        document.getElementById("fileInfo");
+
+    const variableSection =
+        document.getElementById("variableSection");
+
+    const resultSection =
+        document.getElementById("resultSection");
+
+    const errorBox =
+        document.getElementById("errorBox");
+
+    const xSelect =
+        document.getElementById("xSelect");
+
+    const ySelect =
+        document.getElementById("ySelect");
+
+
+    // =========================================================
+    // 기본 함수
+    // =========================================================
+
+    function mean(values) {
+
+        return values.reduce(
+            (sum, value) => sum + value,
+            0
+        ) / values.length;
+    }
+
+
+    function sum(values) {
+
+        return values.reduce(
+            (a, b) => a + b,
+            0
+        );
+    }
+
+
+    function variance(values) {
+
+        if (values.length < 2) {
+            return NaN;
+        }
+
+        const m = mean(values);
+
+        return values.reduce(
+            (acc, value) =>
+                acc + (value - m) ** 2,
+            0
+        ) / (values.length - 1);
+    }
+
+
+    function numberFormat(
+        value,
+        digits = 4
+    ) {
+
+        if (!Number.isFinite(value)) {
+            return "-";
+        }
+
+        if (
+            value !== 0 &&
+            Math.abs(value) < 0.0001
+        ) {
+
+            return value.toExponential(3);
+        }
+
+        return value.toFixed(digits);
+    }
+
+
+    function parseNumber(value) {
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === ""
+        ) {
+            return null;
+        }
+
+        if (typeof value === "number") {
+
+            return Number.isFinite(value)
+                ? value
+                : null;
+        }
+
+        const cleaned =
+            String(value)
+                .replaceAll(",", "")
+                .trim();
+
+        if (cleaned === "") {
+            return null;
+        }
+
+        const number =
+            Number(cleaned);
+
+        return Number.isFinite(number)
+            ? number
+            : null;
+    }
+
+
+    function showError(message) {
+
+        errorBox.textContent =
+            message;
+
+        errorBox.classList.remove(
+            "hidden"
+        );
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    }
+
+
+    function hideError() {
+
+        errorBox.classList.add(
+            "hidden"
+        );
+    }
+
+
+    // =========================================================
+    // 파일 읽기
+    // =========================================================
+
+    fileInput.addEventListener(
+        "change",
+        loadFile
+    );
+
+
+    async function loadFile(event) {
+
+        hideError();
+
+        const file =
+            event.target.files[0];
+
+        if (!file) {
+            return;
+        }
+
+        currentFile = file;
+
+        try {
+
+            let workbook;
+
+            const extension =
+                file.name
+                    .split(".")
+                    .pop()
+                    .toLowerCase();
+
+
+            if (extension === "csv") {
+
+                const text =
+                    await file.text();
+
+                workbook =
+                    XLSX.read(
+                        text,
+                        {
+                            type: "string"
+                        }
+                    );
+
+            } else {
+
+                const buffer =
+                    await file.arrayBuffer();
+
+                workbook =
+                    XLSX.read(
+                        buffer,
+                        {
+                            type: "array"
+                        }
+                    );
+            }
+
+
+            const firstSheetName =
+                workbook.SheetNames[0];
+
+            const sheet =
+                workbook.Sheets[
+                    firstSheetName
+                ];
+
+
+            const matrix =
+                XLSX.utils.sheet_to_json(
+                    sheet,
+                    {
+                        header: 1,
+                        defval: null,
+                        blankrows: false
+                    }
+                );
+
+
+            if (
+                !matrix ||
+                matrix.length < 2
+            ) {
+
+                throw new Error(
+                    "첫 번째 행에는 변수명, 그 아래에는 데이터가 있어야 합니다."
+                );
+            }
+
+
+            headers =
+                matrix[0].map(
+                    (value, index) => {
+
+                        if (
+                            value === null ||
+                            String(value).trim() === ""
+                        ) {
+
+                            return `열${index + 1}`;
+                        }
+
+                        return String(
+                            value
+                        ).trim();
+                    }
+                );
+
+
+            rows =
+                matrix.slice(1);
+
+
+            detectNumericColumns();
+
+
+            if (
+                numericColumns.length < 2
+            ) {
+
+                throw new Error(
+                    "숫자 데이터가 충분히 들어 있는 열이 최소 2개 필요합니다."
+                );
+            }
+
+
+            populateSelectors();
+
+
+            fileInfo.textContent =
+                `${file.name} / 첫 시트: ${firstSheetName} / ${rows.length}행`;
+
+
+            variableSection
+                .classList
+                .remove(
+                    "hidden"
+                );
+
+
+            resultSection
+                .classList
+                .add(
+                    "hidden"
+                );
+
+
+            document
+                .getElementById(
+                    "blueResult"
+                )
+                .classList
+                .add(
+                    "hidden"
+                );
+
+        }
+
+        catch (error) {
+
+            showError(
+                error.message
+            );
+        }
+    }
+
+
+    // =========================================================
+    // 숫자 열 판별
+    // =========================================================
+
+    function detectNumericColumns() {
+
+        numericColumns = [];
+
+
+        headers.forEach(
+            (header, columnIndex) => {
+
+                let numericCount = 0;
+
+
+                rows.forEach(
+                    row => {
+
+                        if (
+                            parseNumber(
+                                row[columnIndex]
+                            ) !== null
+                        ) {
+                            numericCount++;
+                        }
+                    }
+                );
+
+
+                if (numericCount >= 3) {
+
+                    numericColumns.push({
+                        index: columnIndex,
+                        name: header,
+                        count: numericCount
+                    });
+                }
+            }
+        );
+    }
+
+
+    function populateSelectors() {
+
+        xSelect.innerHTML = "";
+        ySelect.innerHTML = "";
+
+
+        numericColumns.forEach(
+            column => {
+
+                const xOption =
+                    document.createElement(
+                        "option"
+                    );
+
+                xOption.value =
+                    column.index;
+
+                xOption.textContent =
+                    `${column.name} (${column.count}개 숫자)`;
+
+
+                const yOption =
+                    document.createElement(
+                        "option"
+                    );
+
+                yOption.value =
+                    column.index;
+
+                yOption.textContent =
+                    `${column.name} (${column.count}개 숫자)`;
+
+
+                xSelect.appendChild(
+                    xOption
+                );
+
+                ySelect.appendChild(
+                    yOption
+                );
+            }
+        );
+
+
+        // 관측번호 / X / Y 구조를 고려하여
+        // 숫자 열이 3개 이상이면 두 번째와 세 번째를 기본 선택
+        if (
+            numericColumns.length >= 3
+        ) {
+
+            xSelect.selectedIndex = 1;
+            ySelect.selectedIndex = 2;
+
+        } else {
+
+            xSelect.selectedIndex = 0;
+            ySelect.selectedIndex = 1;
+        }
+    }
+
+
+    // =========================================================
+    // X,Y 추출
+    // =========================================================
+
+    function getSelectedData() {
+
+        const xIndex =
+            Number(xSelect.value);
+
+        const yIndex =
+            Number(ySelect.value);
+
+
+        if (xIndex === yIndex) {
+
+            throw new Error(
+                "X와 Y는 서로 다른 열을 선택해야 합니다."
+            );
+        }
+
+
+        const x = [];
+        const y = [];
+
+
+        rows.forEach(
+            row => {
+
+                const xv =
+                    parseNumber(
+                        row[xIndex]
+                    );
+
+                const yv =
+                    parseNumber(
+                        row[yIndex]
+                    );
+
+
+                if (
+                    xv !== null &&
+                    yv !== null
+                ) {
+
+                    x.push(xv);
+                    y.push(yv);
+                }
+            }
+        );
+
+
+        if (x.length < 3) {
+
+            throw new Error(
+                "X와 Y가 모두 숫자인 관측치가 최소 3개 필요합니다."
+            );
+        }
+
+
+        return {
+
+            x,
+            y,
+
+            xName:
+                headers[xIndex],
+
+            yName:
+                headers[yIndex]
+        };
+    }
+
+
+    // =========================================================
+    // OLS 계산
+    // =========================================================
+
+    function computeOLS(
+        x,
+        y
+    ) {
+
+        const n =
+            x.length;
+
+        const xBar =
+            mean(x);
+
+        const yBar =
+            mean(y);
+
+
+        let Sxx = 0;
+        let Sxy = 0;
+
+
+        for (
+            let i = 0;
+            i < n;
+            i++
+        ) {
+
+            Sxx +=
+                (x[i] - xBar) ** 2;
+
+            Sxy +=
+                (x[i] - xBar)
+                *
+                (y[i] - yBar);
+        }
+
+
+        if (Sxx <= 1e-15) {
+
+            throw new Error(
+                "X의 값이 모두 같거나 변동이 너무 작아 회귀기울기를 계산할 수 없습니다."
+            );
+        }
+
+
+        const beta1 =
+            Sxy / Sxx;
+
+
+        const beta0 =
+            yBar
+            -
+            beta1 * xBar;
+
+
+        const fitted = [];
+
+        const residuals = [];
+
+
+        for (
+            let i = 0;
+            i < n;
+            i++
+        ) {
+
+            const yHat =
+                beta0
+                +
+                beta1 * x[i];
+
+            fitted.push(
+                yHat
+            );
+
+            residuals.push(
+                y[i] - yHat
+            );
+        }
+
+
+        let SSE = 0;
+        let SST = 0;
+        let SSR = 0;
+
+
+        for (
+            let i = 0;
+            i < n;
+            i++
+        ) {
+
+            SSE +=
+                residuals[i] ** 2;
+
+            SST +=
+                (y[i] - yBar) ** 2;
+
+            SSR +=
+                (fitted[i] - yBar) ** 2;
+        }
+
+
+        if (SST <= 1e-15) {
+
+            throw new Error(
+                "Y의 값이 모두 같아서 R² 등을 계산할 수 없습니다."
+            );
+        }
+
+
+        const dfRegression = 1;
+
+        const dfResidual =
+            n - 2;
+
+
+        const MSE =
+            SSE / dfResidual;
+
+
+        const RMSE =
+            Math.sqrt(MSE);
+
+
+        const r2 =
+            1 - SSE / SST;
+
+
+        const adjustedR2 =
+            1
+            -
+            (1 - r2)
+            *
+            ((n - 1) / (n - 2));
+
+
+        const seBeta1 =
+            Math.sqrt(
+                MSE / Sxx
+            );
+
+
+        const seBeta0 =
+            Math.sqrt(
+                MSE
+                *
+                (
+                    1 / n
+                    +
+                    (xBar ** 2) / Sxx
+                )
+            );
+
+
+        const tBeta1 =
+            beta1 / seBeta1;
+
+
+        const tBeta0 =
+            beta0 / seBeta0;
+
+
+        const pBeta1 =
+            2
+            *
+            (
+                1
+                -
+                jStat.studentt.cdf(
+                    Math.abs(tBeta1),
+                    dfResidual
+                )
+            );
+
+
+        const pBeta0 =
+            2
+            *
+            (
+                1
+                -
+                jStat.studentt.cdf(
+                    Math.abs(tBeta0),
+                    dfResidual
+                )
+            );
+
+
+        const tCritical =
+            jStat.studentt.inv(
+                0.975,
+                dfResidual
+            );
+
+
+        const beta1CI = [
+            beta1
+            -
+            tCritical
+            *
+            seBeta1,
+
+            beta1
+            +
+            tCritical
+            *
+            seBeta1
+        ];
+
+
+        const beta0CI = [
+            beta0
+            -
+            tCritical
+            *
+            seBeta0,
+
+            beta0
+            +
+            tCritical
+            *
+            seBeta0
+        ];
+
+
+        const MSR =
+            SSR / dfRegression;
+
+
+        const F =
+            MSR / MSE;
+
+
+        const fPValue =
+            1
+            -
+            jStat.centralF.cdf(
+                F,
+                1,
+                dfResidual
+            );
+
+
+        return {
+
+            n,
+            xBar,
+            yBar,
+
+            Sxx,
+            Sxy,
+
+            beta0,
+            beta1,
+
+            fitted,
+            residuals,
+
+            SSE,
+            SST,
+            SSR,
+
+            MSE,
+            RMSE,
+
+            r2,
+            adjustedR2,
+
+            seBeta0,
+            seBeta1,
+
+            tBeta0,
+            tBeta1,
+
+            pBeta0,
+            pBeta1,
+
+            beta0CI,
+            beta1CI,
+
+            F,
+            fPValue,
+
+            dfResidual,
+            tCritical
+        };
+    }
+
+
+    // =========================================================
+    // OLS 버튼
+    // =========================================================
+
+    document
+        .getElementById(
+            "analyzeButton"
+        )
+        .addEventListener(
+            "click",
+            runOLS
+        );
+
+
+    function runOLS() {
+
+        hideError();
+
+
+        try {
+
+            const selected =
+                getSelectedData();
+
+
+            currentX =
+                selected.x;
+
+            currentY =
+                selected.y;
+
+
+            currentOLS =
+                computeOLS(
+                    currentX,
+                    currentY
+                );
+
+
+            renderOLS(
+                selected,
+                currentOLS
+            );
+
+
+            resultSection
+                .classList
+                .remove(
+                    "hidden"
+                );
+
+
+            // 시뮬레이션 입력값의 초기값으로
+            // 현재 OLS 추정량을 사용
+            document
+                .getElementById(
+                    "trueBeta0"
+                )
+                .value =
+                currentOLS.beta0.toFixed(4);
+
+
+            document
+                .getElementById(
+                    "trueBeta1"
+                )
+                .value =
+                currentOLS.beta1.toFixed(4);
+
+
+            resultSection
+                .scrollIntoView({
+                    behavior: "smooth"
+                });
+
+        }
+
+        catch (error) {
+
+            showError(
+                error.message
+            );
+        }
+    }
+
+
+    // =========================================================
+    // OLS 결과 표시
+    // =========================================================
+
+    function renderOLS(
+        selected,
+        result
+    ) {
+
+        const sign =
+            result.beta1 >= 0
+                ? "+"
+                : "−";
+
+
+        document
+            .getElementById(
+                "equation"
+            )
+            .textContent =
+
+            `${selected.yName}의 예측값 = `
+            +
+            `${numberFormat(result.beta0)} `
+            +
+            `${sign} `
+            +
+            `${numberFormat(Math.abs(result.beta1))}`
+            +
+            ` × ${selected.xName}`;
+
+
+        document
+            .getElementById(
+                "nValue"
+            )
+            .textContent =
+            result.n;
+
+
+        document
+            .getElementById(
+                "r2Value"
+            )
+            .textContent =
+            numberFormat(
+                result.r2
+            );
+
+
+        document
+            .getElementById(
+                "adjustedR2Value"
+            )
+            .textContent =
+            numberFormat(
+                result.adjustedR2
+            );
+
+
+        document
+            .getElementById(
+                "fValue"
+            )
+            .textContent =
+            numberFormat(
+                result.F
+            );
+
+
+        renderCoefficientTable(
+            selected,
+            result
+        );
+
+
+        renderSumSquares(
+            result
+        );
+
+
+        renderRegressionChart(
+            selected,
+            result
+        );
+
+
+        renderResidualChart(
+            result
+        );
+
+
+        renderQQChart(
+            result
+        );
+    }
+
+
+    // =========================================================
+    // 회귀계수 표
+    // =========================================================
+
+    function renderCoefficientTable(
+        selected,
+        r
+    ) {
+
+        const tbody =
+            document.getElementById(
+                "coefficientTable"
+            );
+
+
+        tbody.innerHTML = "";
+
+
+        const coefficientRows = [
+
+            {
+                name: "절편 β̂₀",
+                estimate: r.beta0,
+                se: r.seBeta0,
+                t: r.tBeta0,
+                p: r.pBeta0,
+                ci: r.beta0CI
+            },
+
+            {
+                name:
+                    `기울기 β̂₁ (${selected.xName})`,
+
+                estimate: r.beta1,
+                se: r.seBeta1,
+                t: r.tBeta1,
+                p: r.pBeta1,
+                ci: r.beta1CI
+            }
+        ];
+
+
+        coefficientRows.forEach(
+            item => {
+
+                const tr =
+                    document.createElement(
+                        "tr"
+                    );
+
+
+                const values = [
+
+                    item.name,
+
+                    numberFormat(
+                        item.estimate
+                    ),
+
+                    numberFormat(
+                        item.se
+                    ),
+
+                    numberFormat(
+                        item.t
+                    ),
+
+                    numberFormat(
+                        item.p,
+                        6
+                    ),
+
+                    `[${numberFormat(item.ci[0])}, ${numberFormat(item.ci[1])}]`
+                ];
+
+
+                values.forEach(
+                    value => {
+
+                        const td =
+                            document.createElement(
+                                "td"
+                            );
+
+                        td.textContent =
+                            value;
+
+                        tr.appendChild(
+                            td
+                        );
+                    }
+                );
+
+
+                tbody.appendChild(
+                    tr
+                );
+            }
+        );
+    }
+
+
+    // =========================================================
+    // 제곱합
+    // =========================================================
+
+    function renderSumSquares(r) {
+
+        document
+            .getElementById(
+                "sumSquares"
+            )
+            .textContent =
+
+`SST = Σ(Yᵢ − Ȳ)²
+    = ${numberFormat(r.SST)}
+
+SSR = Σ(Ŷᵢ − Ȳ)²
+    = ${numberFormat(r.SSR)}
+
+SSE = Σ(Yᵢ − Ŷᵢ)²
+    = ${numberFormat(r.SSE)}
+
+
+SST ≈ SSR + SSE
+
+${numberFormat(r.SST)}
+≈
+${numberFormat(r.SSR)}
++
+${numberFormat(r.SSE)}
+
+
+R²
+= SSR / SST
+= 1 − SSE / SST
+
+= ${numberFormat(r.r2)}
+
+
+MSE
+= SSE / (n − 2)
+
+= ${numberFormat(r.MSE)}
+
+
+F
+= (SSR / 1)
+  ─────────
+  SSE/(n−2)
+
+= ${numberFormat(r.F)}
+
+F-test p-value
+= ${numberFormat(r.fPValue, 6)}`;
+    }
+
+
+    // =========================================================
+    // 회귀선
+    // =========================================================
+
+    function renderRegressionChart(
+        selected,
+        r
+    ) {
+
+        const minX =
+            Math.min(
+                ...currentX
+            );
+
+        const maxX =
+            Math.max(
+                ...currentX
+            );
+
+
+        const gridX = [];
+        const lineY = [];
+        const lower = [];
+        const upper = [];
+
+
+        const steps = 150;
+
+
+        for (
+            let i = 0;
+            i <= steps;
+            i++
+        ) {
+
+            const x0 =
+                minX
+                +
+                (
+                    (maxX - minX)
+                    *
+                    i / steps
+                );
+
+
+            const yHat =
+                r.beta0
+                +
+                r.beta1 * x0;
+
+
+            const seMean =
+                Math.sqrt(
+                    r.MSE
+                    *
+                    (
+                        1 / r.n
+                        +
+                        ((x0 - r.xBar) ** 2)
+                        / r.Sxx
+                    )
+                );
+
+
+            gridX.push(
+                x0
+            );
+
+            lineY.push(
+                yHat
+            );
+
+
+            lower.push(
+                yHat
+                -
+                r.tCritical
+                *
+                seMean
+            );
+
+
+            upper.push(
+                yHat
+                +
+                r.tCritical
+                *
+                seMean
+            );
+        }
+
+
+        const observed = {
+
+            x: currentX,
+            y: currentY,
+
+            mode: "markers",
+
+            type: "scatter",
+
+            name: "관측값"
+        };
+
+
+        const lowerTrace = {
+
+            x: gridX,
+            y: lower,
+
+            mode: "lines",
+
+            line: {
+                width: 0
+            },
+
+            hoverinfo: "skip",
+
+            showlegend: false
+        };
+
+
+        const upperTrace = {
+
+            x: gridX,
+            y: upper,
+
+            mode: "lines",
+
+            fill: "tonexty",
+
+            line: {
+                width: 0
+            },
+
+            name: "95% 평균반응 신뢰구간"
+        };
+
+
+        const regression = {
+
+            x: gridX,
+            y: lineY,
+
+            mode: "lines",
+
+            name: "OLS 회귀선"
+        };
+
+
+        Plotly.newPlot(
+
+            "regressionChart",
+
+            [
+                observed,
+                lowerTrace,
+                upperTrace,
+                regression
+            ],
+
+            {
+
+                xaxis: {
+                    title:
+                        selected.xName
+                },
+
+                yaxis: {
+                    title:
+                        selected.yName
+                },
+
+                margin: {
+                    t: 20
+                },
+
+                hovermode:
+                    "closest"
+            },
+
+            {
+                responsive: true
+            }
+        );
+    }
+
+
+    // =========================================================
+    // 잔차 그래프
+    // =========================================================
+
+    function renderResidualChart(r) {
+
+        const min =
+            Math.min(
+                ...r.fitted
+            );
+
+        const max =
+            Math.max(
+                ...r.fitted
+            );
+
+
+        Plotly.newPlot(
+
+            "residualChart",
+
+            [
+
+                {
+
+                    x: r.fitted,
+                    y: r.residuals,
+
+                    mode:
+                        "markers",
+
+                    type:
+                        "scatter",
+
+                    name:
+                        "잔차"
+                },
+
+                {
+
+                    x: [min, max],
+                    y: [0, 0],
+
+                    mode:
+                        "lines",
+
+                    name:
+                        "0 기준선"
+                }
+
+            ],
+
+            {
+
+                xaxis: {
+                    title:
+                        "적합값 Ŷ"
+                },
+
+                yaxis: {
+                    title:
+                        "잔차 e = Y − Ŷ"
+                },
+
+                margin: {
+                    t: 20
+                }
+            },
+
+            {
+                responsive: true
+            }
+        );
+    }
+
+
+    // =========================================================
+    // QQ Plot
+    // =========================================================
+
+    function renderQQChart(r) {
+
+        const sortedResiduals =
+            [...r.residuals]
+                .sort(
+                    (a, b) => a - b
+                );
+
+
+        const theoretical = [];
+
+
+        for (
+            let i = 0;
+            i < sortedResiduals.length;
+            i++
+        ) {
+
+            const p =
+                (
+                    (i + 1) - 0.375
+                )
+                /
+                (
+                    sortedResiduals.length
+                    +
+                    0.25
+                );
+
+
+            theoretical.push(
+                jStat.normal.inv(
+                    p,
+                    0,
+                    1
+                )
+            );
+        }
+
+
+        // Q-Q 기준선을 단순회귀로 생성
+        const qResult =
+            computeSimpleLine(
+                theoretical,
+                sortedResiduals
+            );
+
+
+        const referenceY =
+            theoretical.map(
+                q =>
+                    qResult.intercept
+                    +
+                    qResult.slope
+                    * q
+            );
+
+
+        Plotly.newPlot(
+
+            "qqChart",
+
+            [
+
+                {
+
+                    x:
+                        theoretical,
+
+                    y:
+                        sortedResiduals,
+
+                    mode:
+                        "markers",
+
+                    name:
+                        "잔차"
+                },
+
+                {
+
+                    x:
+                        theoretical,
+
+                    y:
+                        referenceY,
+
+                    mode:
+                        "lines",
+
+                    name:
+                        "기준선"
+                }
+
+            ],
+
+            {
+
+                xaxis: {
+                    title:
+                        "정규분포의 이론적 분위수"
+                },
+
+                yaxis: {
+                    title:
+                        "표본 잔차 분위수"
+                },
+
+                margin: {
+                    t: 20
+                }
+            },
+
+            {
+                responsive: true
+            }
+        );
+    }
+
+
+    function computeSimpleLine(
+        x,
+        y
+    ) {
+
+        const xb =
+            mean(x);
+
+        const yb =
+            mean(y);
+
+
+        let numerator = 0;
+        let denominator = 0;
+
+
+        for (
+            let i = 0;
+            i < x.length;
+            i++
+        ) {
+
+            numerator +=
+                (x[i] - xb)
+                *
+                (y[i] - yb);
+
+            denominator +=
+                (x[i] - xb) ** 2;
+        }
+
+
+        const slope =
+            numerator / denominator;
+
+
+        const intercept =
+            yb - slope * xb;
+
+
+        return {
+            slope,
+            intercept
+        };
+    }
+
+
+    // =========================================================
+    // 정규난수
+    // Box-Muller
+    // =========================================================
+
+    function randomNormal() {
+
+        let u1 = 0;
+        let u2 = 0;
+
+
+        while (u1 === 0) {
+
+            u1 =
+                Math.random();
+        }
+
+
+        while (u2 === 0) {
+
+            u2 =
+                Math.random();
+        }
+
+
+        return Math.sqrt(
+            -2
+            *
+            Math.log(u1)
+        )
+        *
+        Math.cos(
+            2
+            *
+            Math.PI
+            *
+            u2
+        );
+    }
+
+
+    // =========================================================
+    // 반복용 최소 OLS
+    // =========================================================
+
+    function quickOLS(
+        x,
+        y
+    ) {
+
+        const n =
+            x.length;
+
+
+        const xb =
+            mean(x);
+
+        const yb =
+            mean(y);
+
+
+        let Sxx = 0;
+        let Sxy = 0;
+
+
+        for (
+            let i = 0;
+            i < n;
+            i++
+        ) {
+
+            Sxx +=
+                (x[i] - xb) ** 2;
+
+            Sxy +=
+                (x[i] - xb)
+                *
+                (y[i] - yb);
+        }
+
+
+        const beta1 =
+            Sxy / Sxx;
+
+
+        const beta0 =
+            yb
+            -
+            beta1
+            *
+            xb;
+
+
+        let SSE = 0;
+
+
+        for (
+            let i = 0;
+            i < n;
+            i++
+        ) {
+
+            const residual =
+                y[i]
+                -
+                (
+                    beta0
+                    +
+                    beta1
+                    *
+                    x[i]
+                );
+
+
+            SSE +=
+                residual ** 2;
+        }
+
+
+        return {
+
+            beta0,
+            beta1,
+            SSE
+        };
+    }
+
+
+    // =========================================================
+    // 대안 선형 불편 기울기 가중치
+    // =========================================================
+
+    function createAlternativeWeights(x) {
+
+        const n =
+            x.length;
+
+        const xb =
+            mean(x);
+
+
+        let Sxx = 0;
+
+
+        for (
+            let i = 0;
+            i < n;
+            i++
+        ) {
+
+            Sxx +=
+                (x[i] - xb) ** 2;
+        }
+
+
+        // OLS slope weights
+        //
+        // w_i = (x_i - xbar) / Sxx
+
+        const wOLS =
+            x.map(
+                xi =>
+                    (xi - xb)
+                    / Sxx
+            );
+
+
+        let c = null;
+
+
+        // 표준기저 벡터를
+        // span{1,x}에 투영한 뒤
+        // 잔차를 사용
+
+        for (
+            let candidate = 0;
+            candidate < n;
+            candidate++
+        ) {
+
+            const z =
+                Array(n).fill(0);
+
+            z[candidate] = 1;
+
+
+            const zb =
+                1 / n;
+
+
+            let Sxz = 0;
+
+
+            for (
+                let i = 0;
+                i < n;
+                i++
+            ) {
+
+                Sxz +=
+                    (x[i] - xb)
+                    *
+                    (z[i] - zb);
+            }
+
+
+            const gamma =
+                Sxz / Sxx;
+
+
+            const alpha =
+                zb
+                -
+                gamma * xb;
+
+
+            const residual =
+                z.map(
+                    (zi, i) =>
+                        zi
+                        -
+                        alpha
+                        -
+                        gamma
+                        *
+                        x[i]
+                );
+
+
+            const norm =
+                Math.sqrt(
+                    residual.reduce(
+                        (acc, value) =>
+                            acc
+                            +
+                            value ** 2,
+                        0
+                    )
+                );
+
+
+            if (norm > 1e-8) {
+
+                c =
+                    residual;
+
+                break;
+            }
+        }
+
+
+        if (!c) {
+
+            throw new Error(
+                "대안 선형 불편추정량을 구성할 수 없습니다."
+            );
+        }
+
+
+        const normW =
+            Math.sqrt(
+                wOLS.reduce(
+                    (acc, value) =>
+                        acc
+                        +
+                        value ** 2,
+                    0
+                )
+            );
+
+
+        const normC =
+            Math.sqrt(
+                c.reduce(
+                    (acc, value) =>
+                        acc
+                        +
+                        value ** 2,
+                    0
+                )
+            );
+
+
+        // OLS와 차이가 눈에 보이도록 크기 조정
+        c =
+            c.map(
+                value =>
+                    value
+                    *
+                    normW
+                    /
+                    normC
+            );
+
+
+        const wAlternative =
+            wOLS.map(
+                (weight, i) =>
+                    weight
+                    +
+                    c[i]
+            );
+
+
+        return {
+
+            wOLS,
+            wAlternative,
+            xBar: xb
+        };
+    }
+
+
+    // =========================================================
+    // BLUE 실행
+    // =========================================================
+
+    document
+        .getElementById(
+            "blueButton"
+        )
+        .addEventListener(
+            "click",
+            runBlueSimulation
+        );
+
+
+    function runBlueSimulation() {
+
+        hideError();
+
+
+        try {
+
+            if (
+                !currentX ||
+                !currentOLS
+            ) {
+
+                throw new Error(
+                    "먼저 OLS 분석을 실행해주세요."
+                );
+            }
+
+
+            const beta0 =
+                Number(
+                    document
+                        .getElementById(
+                            "trueBeta0"
+                        )
+                        .value
+                );
+
+
+            const beta1 =
+                Number(
+                    document
+                        .getElementById(
+                            "trueBeta1"
+                        )
+                        .value
+                );
+
+
+            const sigma =
+                Number(
+                    document
+                        .getElementById(
+                            "trueSigma"
+                        )
+                        .value
+                );
+
+
+            let simulations =
+                Number(
+                    document
+                        .getElementById(
+                            "simulationCount"
+                        )
+                        .value
+                );
+
+
+            if (
+                !Number.isFinite(beta0) ||
+                !Number.isFinite(beta1)
+            ) {
+
+                throw new Error(
+                    "β₀와 β₁을 입력해주세요."
+                );
+            }
+
+
+            if (
+                !Number.isFinite(sigma) ||
+                sigma <= 0
+            ) {
+
+                throw new Error(
+                    "σ는 0보다 큰 숫자여야 합니다."
+                );
+            }
+
+
+            if (
+                !Number.isInteger(simulations) ||
+                simulations < 100
+            ) {
+
+                throw new Error(
+                    "반복횟수는 100 이상의 정수여야 합니다."
+                );
+            }
+
+
+            simulations =
+                Math.min(
+                    simulations,
+                    20000
+                );
+
+
+            const result =
+                simulateBlue(
+
+                    currentX,
+
+                    beta0,
+
+                    beta1,
+
+                    sigma,
+
+                    simulations
+                );
+
+
+            renderBlue(
+                result
+            );
+
+
+            document
+                .getElementById(
+                    "blueResult"
+                )
+                .classList
+                .remove(
+                    "hidden"
+                );
+
+        }
+
+        catch (error) {
+
+            showError(
+                error.message
+            );
+        }
+    }
+
+
+    // =========================================================
+    // BLUE 시뮬레이션
+    // =========================================================
+
+    function simulateBlue(
+        x,
+        beta0,
+        beta1,
+        sigma,
+        simulations
+    ) {
+
+        const n =
+            x.length;
+
+
+        const xb =
+            mean(x);
+
+
+        let Sxx = 0;
+
+
+        for (
+            const xi of x
+        ) {
+
+            Sxx +=
+                (xi - xb) ** 2;
+        }
+
+
+        const {
+            wOLS,
+            wAlternative
+        } =
+        createAlternativeWeights(
+            x
+        );
+
+
+        const alternativeInterceptWeights =
+            wAlternative.map(
+                weight =>
+                    1 / n
+                    -
+                    xb
+                    *
+                    weight
+            );
+
+
+        const olsInterceptWeights =
+            wOLS.map(
+                weight =>
+                    1 / n
+                    -
+                    xb
+                    *
+                    weight
+            );
+
+
+        const theoreticalVarOLS1 =
+            sigma ** 2
+            *
+            sum(
+                wOLS.map(
+                    value =>
+                        value ** 2
+                )
+            );
+
+
+        const theoreticalVarAlt1 =
+            sigma ** 2
+            *
+            sum(
+                wAlternative.map(
+                    value =>
+                        value ** 2
+                )
+            );
+
+
+        const theoreticalVarOLS0 =
+            sigma ** 2
+            *
+            sum(
+                olsInterceptWeights.map(
+                    value =>
+                        value ** 2
+                )
+            );
+
+
+        const theoreticalVarAlt0 =
+            sigma ** 2
+            *
+            sum(
+                alternativeInterceptWeights.map(
+                    value =>
+                        value ** 2
+                )
+            );
+
+
+        let sumOLS0 = 0;
+        let sumOLS1 = 0;
+
+        let sumAlt0 = 0;
+        let sumAlt1 = 0;
+
+        let sumOLS0Sq = 0;
+        let sumOLS1Sq = 0;
+
+        let sumAlt0Sq = 0;
+        let sumAlt1Sq = 0;
+
+        let sumSSE = 0;
+
+
+        const histogramLimit =
+            Math.min(
+                simulations,
+                4000
+            );
+
+
+        const olsBeta1Samples = [];
+
+        const altBeta1Samples = [];
+
+
+        for (
+            let r = 0;
+            r < simulations;
+            r++
+        ) {
+
+            const y =
+                new Array(n);
+
+
+            for (
+                let i = 0;
+                i < n;
+                i++
+            ) {
+
+                const u =
+                    sigma
+                    *
+                    randomNormal();
+
+
+                y[i] =
+                    beta0
+                    +
+                    beta1
+                    *
+                    x[i]
+                    +
+                    u;
+            }
+
+
+            const ols =
+                quickOLS(
+                    x,
+                    y
+                );
+
+
+            const altBeta1 =
+                sum(
+                    y.map(
+                        (yi, i) =>
+                            wAlternative[i]
+                            *
+                            yi
+                    )
+                );
+
+
+            const altBeta0 =
+                mean(y)
+                -
+                xb
+                *
+                altBeta1;
+
+
+            sumOLS0 +=
+                ols.beta0;
+
+            sumOLS1 +=
+                ols.beta1;
+
+            sumAlt0 +=
+                altBeta0;
+
+            sumAlt1 +=
+                altBeta1;
+
+
+            sumOLS0Sq +=
+                ols.beta0 ** 2;
+
+            sumOLS1Sq +=
+                ols.beta1 ** 2;
+
+            sumAlt0Sq +=
+                altBeta0 ** 2;
+
+            sumAlt1Sq +=
+                altBeta1 ** 2;
+
+
+            sumSSE +=
+                ols.SSE;
+
+
+            if (
+                r < histogramLimit
+            ) {
+
+                olsBeta1Samples.push(
+                    ols.beta1
+                );
+
+                altBeta1Samples.push(
+                    altBeta1
+                );
+            }
+        }
+
+
+        const meanOLS0 =
+            sumOLS0
+            /
+            simulations;
+
+
+        const meanOLS1 =
+            sumOLS1
+            /
+            simulations;
+
+
+        const meanAlt0 =
+            sumAlt0
+            /
+            simulations;
+
+
+        const meanAlt1 =
+            sumAlt1
+            /
+            simulations;
+
+
+        const empiricalVarOLS0 =
+            (
+                sumOLS0Sq
+                -
+                simulations
+                *
+                meanOLS0 ** 2
+            )
+            /
+            (simulations - 1);
+
+
+        const empiricalVarOLS1 =
+            (
+                sumOLS1Sq
+                -
+                simulations
+                *
+                meanOLS1 ** 2
+            )
+            /
+            (simulations - 1);
+
+
+        const empiricalVarAlt0 =
+            (
+                sumAlt0Sq
+                -
+                simulations
+                *
+                meanAlt0 ** 2
+            )
+            /
+            (simulations - 1);
+
+
+        const empiricalVarAlt1 =
+            (
+                sumAlt1Sq
+                -
+                simulations
+                *
+                meanAlt1 ** 2
+            )
+            /
+            (simulations - 1);
+
+
+        const meanSSE =
+            sumSSE
+            /
+            simulations;
+
+
+        const expectedSSE =
+            (n - 2)
+            *
+            sigma ** 2;
+
+
+        const meanMSE =
+            meanSSE
+            /
+            (n - 2);
+
+
+        return {
+
+            n,
+            beta0,
+            beta1,
+
+            sigma,
+
+            simulations,
+
+            meanOLS0,
+            meanOLS1,
+
+            meanAlt0,
+            meanAlt1,
+
+            biasOLS0:
+                meanOLS0
+                -
+                beta0,
+
+            biasOLS1:
+                meanOLS1
+                -
+                beta1,
+
+            biasAlt0:
+                meanAlt0
+                -
+                beta0,
+
+            biasAlt1:
+                meanAlt1
+                -
+                beta1,
+
+            theoreticalVarOLS0,
+            theoreticalVarOLS1,
+
+            theoreticalVarAlt0,
+            theoreticalVarAlt1,
+
+            empiricalVarOLS0,
+            empiricalVarOLS1,
+
+            empiricalVarAlt0,
+            empiricalVarAlt1,
+
+            expectedSSE,
+            meanSSE,
+            meanMSE,
+
+            olsBeta1Samples,
+            altBeta1Samples
+        };
+    }
+
+
+    // =========================================================
+    // BLUE 결과 표시
+    // =========================================================
+
+    function renderBlue(r) {
+
+        document
+            .getElementById(
+                "unbiasedResult"
+            )
+            .textContent =
+
+`가정한 참 β₀
+= ${numberFormat(r.beta0)}
+
+반복표본에서 평균 β̂₀
+= ${numberFormat(r.meanOLS0)}
+
+Bias(β̂₀)
+= E[β̂₀] − β₀
+≈ ${numberFormat(r.biasOLS0, 6)}
+
+
+가정한 참 β₁
+= ${numberFormat(r.beta1)}
+
+반복표본에서 평균 β̂₁
+= ${numberFormat(r.meanOLS1)}
+
+Bias(β̂₁)
+= E[β̂₁] − β₁
+≈ ${numberFormat(r.biasOLS1, 6)}
+
+
+반복 횟수
+= ${r.simulations}`;
+
+
+        document
+            .getElementById(
+                "sseResult"
+            )
+            .textContent =
+
+`Gauss–Markov 가정 아래 단순회귀에서는
+
+E[SSE | X]
+= (n − 2)σ²
+
+
+이론값:
+
+(n − 2)σ²
+= (${r.n} − 2) × ${numberFormat(r.sigma ** 2)}
+= ${numberFormat(r.expectedSSE)}
+
+
+반복표본에서 관측된 평균 SSE:
+
+${numberFormat(r.meanSSE)}
+
+
+그리고
+
+MSE = SSE/(n−2)
+
+이므로
+
+E[MSE | X] = σ²
+
+
+가정한 참 σ²
+= ${numberFormat(r.sigma ** 2)}
+
+반복표본 평균 MSE
+= ${numberFormat(r.meanMSE)}`;
+
+
+        document
+            .getElementById(
+                "varianceResult"
+            )
+            .textContent =
+
+`기울기 β₁에 대해
+
+
+OLS의 이론적 분산
+
+Var(β̂₁ | X)
+= σ² / Σ(Xᵢ − X̄)²
+
+= ${numberFormat(r.theoreticalVarOLS1, 6)}
+
+
+다른 선형 불편추정량의 이론적 분산
+
+= ${numberFormat(r.theoreticalVarAlt1, 6)}
+
+
+반복표본에서 실제로 관측된 분산
+
+OLS
+= ${numberFormat(r.empiricalVarOLS1, 6)}
+
+대안 추정량
+= ${numberFormat(r.empiricalVarAlt1, 6)}
+
+
+두 추정량 모두 선형이고 불편하도록 구성했습니다.
+
+그러나 OLS의 분산이 더 작습니다.
+
+
+주의:
+
+이 한 가지 대안과의 비교만으로
+BLUE 전체가 수학적으로 증명되는 것은 아닙니다.
+
+모든 선형 불편추정량에 대한 일반적인 증명은
+아래 Gauss–Markov 증명에서
+
+Var(β̃ | X)
+− Var(β̂OLS | X)
+= σ²CC'
+
+가 positive semidefinite임을 보임으로써 완성됩니다.`;
+
+
+        renderBetaHistogram(
+            r
+        );
+
+
+        renderVarianceChart(
+            r
+        );
+    }
+
+
+    // =========================================================
+    // 표본추출분포 그래프
+    // =========================================================
+
+    function renderBetaHistogram(r) {
+
+        Plotly.newPlot(
+
+            "betaHistogram",
+
+            [
+
+                {
+
+                    x:
+                        r.olsBeta1Samples,
+
+                    type:
+                        "histogram",
+
+                    opacity:
+                        0.65,
+
+                    name:
+                        "OLS β̂₁"
+                },
+
+                {
+
+                    x:
+                        r.altBeta1Samples,
+
+                    type:
+                        "histogram",
+
+                    opacity:
+                        0.50,
+
+                    name:
+                        "다른 선형 불편추정량"
+                }
+
+            ],
+
+            {
+
+                barmode:
+                    "overlay",
+
+                xaxis: {
+                    title:
+                        "기울기 추정값"
+                },
+
+                yaxis: {
+                    title:
+                        "빈도"
+                },
+
+                shapes: [
+
+                    {
+
+                        type: "line",
+
+                        x0:
+                            r.beta1,
+
+                        x1:
+                            r.beta1,
+
+                        y0:
+                            0,
+
+                        y1:
+                            1,
+
+                        yref:
+                            "paper",
+
+                        line: {
+                            dash:
+                                "dash"
+                        }
+                    }
+
+                ],
+
+                annotations: [
+
+                    {
+
+                        x:
+                            r.beta1,
+
+                        y:
+                            1,
+
+                        yref:
+                            "paper",
+
+                        text:
+                            "참 β₁",
+
+                        showarrow:
+                            false
+                    }
+
+                ],
+
+                margin: {
+                    t: 30
+                }
+            },
+
+            {
+                responsive: true
+            }
+        );
+    }
+
+
+    // =========================================================
+    // 분산 비교
+    // =========================================================
+
+    function renderVarianceChart(r) {
+
+        Plotly.newPlot(
+
+            "varianceChart",
+
+            [
+
+                {
+
+                    x: [
+                        "OLS",
+                        "다른 선형 불편추정량"
+                    ],
+
+                    y: [
+                        r.theoreticalVarOLS1,
+                        r.theoreticalVarAlt1
+                    ],
+
+                    type:
+                        "bar",
+
+                    name:
+                        "이론적 분산"
+                }
+
+            ],
+
+            {
+
+                yaxis: {
+                    title:
+                        "Var(기울기 추정량 | X)"
+                },
+
+                margin: {
+                    t: 30
+                }
+            },
+
+            {
+                responsive: true
+            }
+        );
+    }
+
+</script>
+
+</body>
+
+</html>
